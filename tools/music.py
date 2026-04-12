@@ -8,6 +8,8 @@ Works on both Mac and Pi. Requires:
 
 import subprocess
 import sys
+import openai
+import config
 
 TOOL_SCHEMA = {
     "name": "play_music",
@@ -38,6 +40,40 @@ STOP_SCHEMA = {
 }
 
 
+def _refine_query(raw: str) -> str:
+    """
+    Pass the raw STT query through the LLM to fix transcription errors
+    and produce a clean YouTube search string.
+    """
+    client = openai.OpenAI(
+        api_key=config.OPENROUTER_API_KEY,
+        base_url=config.OPENROUTER_BASE_URL,
+    )
+    response = client.chat.completions.create(
+        model=config.PRIMARY_MODEL,
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You are a music search assistant. "
+                    "The user asked to play music but the request was captured by speech-to-text "
+                    "and may contain transcription errors. "
+                    "Return ONLY a clean YouTube search query (artist + song/genre)."
+                    "Query may be distorted by transcription error re write based on phinetic similarity, "
+                    "No explanation, no punctuation, just the search string."
+                ),
+            },
+            {"role": "user", "content": raw},
+        ],
+        max_tokens=40,
+        temperature=0,
+    )
+    refined = response.choices[0].message.content.strip().strip('"').strip("'")
+    if refined and refined != raw:
+        print(f"[music] Query refined: {raw!r} → {refined!r}")
+    return refined or raw
+
+
 def play_music(query: str) -> str:
     """Search YouTube for `query` and stream audio via mpv."""
     global _mpv_process
@@ -45,6 +81,7 @@ def play_music(query: str) -> str:
     # Stop any existing playback before starting new
     _stop()
 
+    query = _refine_query(query)
     print(f"[music] Searching YouTube for: {query!r}")
 
     try:

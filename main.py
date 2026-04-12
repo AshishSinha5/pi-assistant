@@ -45,6 +45,7 @@ def _run_voice_mode():
     from agent import agent
     from audio.wake_word import wait_for_wake_word
     from audio.stt import transcribe_once
+    from audio.tones import play_listening_tone, play_done_tone
 
     # Bluetooth profile switching is Pi-only
     is_pi = sys.platform != "darwin"
@@ -65,10 +66,12 @@ def _run_voice_mode():
             switch_to_hfp()
 
         wait_for_wake_word()
+        play_listening_tone()
         print("Listening for your command...", flush=True)
 
         text = transcribe_once()
         if not text:
+            play_done_tone()
             print("[voice] Nothing heard, going back to sleep.\n")
             continue
 
@@ -80,6 +83,7 @@ def _run_voice_mode():
 
         response, history = agent.run(text, history)
         print(f"Pi: {response}\n")
+        play_done_tone()
         # Future Phase 3: TTS speaks `response` here
 
 

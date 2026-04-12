@@ -21,7 +21,7 @@ WHISPER_MODEL = "base.en"
 
 # Wake word keyword — matched as a whole word in the transcription.
 # With Whisper you can use the actual word "pi" directly.
-WAKE_WORD_KEYWORD = "hey there"
+WAKE_WORD_KEYWORD = "hello"
 
 # RMS energy threshold for speech onset detection (0–32768).
 # Increase if the mic picks up too much background noise.
