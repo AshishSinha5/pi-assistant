@@ -1,0 +1,13 @@
+# Core
+openai>=1.0.0          # OpenRouter uses the OpenAI-compatible API
+python-dotenv>=1.0.0   # Load OPENROUTER_API_KEY from .env
+yt-dlp>=2024.1.1       # YouTube stream URL resolution (Mac + Pi)
+
+# Audio pipeline (Mac + Pi — voice mode)
+faster-whisper>=1.0.0  # STT + wake word detection (model auto-downloaded on first use)
+sounddevice>=0.4.6     # Cross-platform mic capture
+numpy>=1.24.0          # Audio array processing
+
+# mpv is a system binary, not a pip package:
+#   Mac: brew install mpv
+#   Pi:  sudo apt install mpv
