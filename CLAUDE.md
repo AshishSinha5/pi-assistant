@@ -78,7 +78,8 @@ pi-assistant/
 │
 ├── tools/
 │   ├── __init__.py
-│   └── music.py               # yt-dlp + mpv player (real streaming on Mac + Pi)
+│   ├── music.py               # yt-dlp + mpv player (real streaming on Mac + Pi)
+│   └── light.py               # turn_on_light + turn_off_light via python-kasa (Tapo)
 │
 ├── audio/
 │   ├── wake_word.py           # openWakeWord listener (Pi only)
@@ -172,12 +173,11 @@ register(TOOL_SCHEMA, get_weather)
 - `main.py` ties voice pipeline + agent
 - End-to-end: say "Pi" → speak command → music plays
 
-### Phase 4 — New tools (future)
+### Phase 4 — New tools (in progress)
+- `tools/light.py` — `turn_on_light` / `turn_off_light` via python-kasa (Tapo) ✅ complete
 - Timer / alarm
 - Weather
-- Smart home
 - News briefing
-- Whatever
 
 ---
 
@@ -205,5 +205,6 @@ Vosk is already installed and tested on this Pi.
 
 ## Notes
 - Always check if a command is Pi-only before running on Mac (audio, GPIO, Bluetooth)
-- `.env` file holds `OPENROUTER_API_KEY` — never commit this
+- `.env` file holds `OPENROUTER_API_KEY`, `KASA_USERNAME`, `KASA_PASSWORD`, `TAPO_HOST` — never commit this
 - `bluez_card` ID for XM5 needs to be detected dynamically, not hardcoded
+- Tapo light control uses python-kasa with async API (wrapped in `asyncio.run` for sync compatibility); `TAPO_HOST` must be the local IP of the device

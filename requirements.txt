@@ -8,6 +8,9 @@ faster-whisper>=1.0.0  # STT + wake word detection (model auto-downloaded on fir
 sounddevice>=0.4.6     # Cross-platform mic capture
 numpy>=1.24.0          # Audio array processing
 
+# Smart home
+python-kasa>=0.7.0      # Tapo/Kasa light control (turn_on_light, turn_off_light)
+
 # mpv is a system binary, not a pip package:
 #   Mac: brew install mpv
 #   Pi:  sudo apt install mpv

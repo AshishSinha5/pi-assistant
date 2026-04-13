@@ -13,8 +13,11 @@ import sys
 def _register_tools():
     from agent import tool_registry
     from tools.music import play_music, stop_music, TOOL_SCHEMA as MUSIC_SCHEMA, STOP_SCHEMA
+    from tools.light import turn_on_light, turn_off_light, TURN_ON_SCHEMA, TURN_OFF_SCHEMA
     tool_registry.register(MUSIC_SCHEMA, play_music)
     tool_registry.register(STOP_SCHEMA, stop_music)
+    tool_registry.register(TURN_ON_SCHEMA, turn_on_light)
+    tool_registry.register(TURN_OFF_SCHEMA, turn_off_light)
 
 
 def main():

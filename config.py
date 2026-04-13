@@ -4,6 +4,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+
+# --- Tapo smart light ---
+KASA_USERNAME = os.getenv("KASA_USERNAME")
+KASA_PASSWORD = os.getenv("KASA_PASSWORD")
+TAPO_HOST = os.getenv("TAPO_HOST")
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 PRIMARY_MODEL = "qwen/qwen-2.5-72b-instruct"
 FALLBACK_MODEL = "google/gemini-flash-1.5"

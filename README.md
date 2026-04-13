@@ -23,7 +23,7 @@ Wake word heard → STT transcribes command → LLM decides tool → Tool execut
 - **Wake word** — faster-whisper listens in 3-second windows and fires when the configured keyword is heard
 - **STT** — faster-whisper records until silence and returns the transcribed command
 - **LLM** — OpenRouter (Qwen 2.5 72B) receives the command and calls tools
-- **Tools** — `play_music` streams audio via yt-dlp + mpv; `stop_music` kills playback
+- **Tools** — `play_music` streams audio via yt-dlp + mpv; `stop_music` kills playback; `turn_on_light` / `turn_off_light` control a Tapo smart light via python-kasa
 
 ---
 
@@ -39,7 +39,8 @@ pi-assistant/
 │   └── tool_registry.py       # Register tools with one line each
 │
 ├── tools/
-│   └── music.py               # play_music + stop_music (yt-dlp + mpv)
+│   ├── music.py               # play_music + stop_music (yt-dlp + mpv)
+│   └── light.py               # turn_on_light + turn_off_light (python-kasa / Tapo)
 │
 ├── audio/
 │   ├── stt.py                 # faster-whisper STT with energy-based VAD
@@ -74,15 +75,19 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Configure API key
+### Configure API key and smart home
 
 ```bash
 cp .env.example .env
-# Edit .env and add your OpenRouter key
-echo "OPENROUTER_API_KEY=your_key_here" > .env
+# Edit .env and fill in your keys
 ```
 
-Get a free key at [openrouter.ai](https://openrouter.ai).
+```
+OPENROUTER_API_KEY=your_key_here   # free at openrouter.ai
+KASA_USERNAME=your@email.com       # Tapo/Kasa account
+KASA_PASSWORD=yourpassword
+TAPO_HOST=192.168.x.x              # local IP of the Tapo device
+```
 
 ---
 
@@ -160,4 +165,4 @@ tool_registry.register(WEATHER_SCHEMA, get_weather)
 | 1 | ✅ Complete | LLM + tools + real music streaming + mic pipeline on Mac |
 | 2 | Planned | Pi audio pipeline (Bluetooth profile switching wired up) |
 | 3 | Planned | Full integration — wake word → speech → music plays on Pi |
-| 4 | Future | New tools: timers, weather, smart home, news |
+| 4 | In progress | New tools: timers, weather, news |
