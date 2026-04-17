@@ -34,7 +34,7 @@ def switch_to_a2dp() -> None:
     _require_pi()
     card = get_card_id()
     subprocess.run(
-        ["pactl", "set-card-profile", card, "a2dp-sink"],
+        ["pactl", "set-card-profile", card, "a2dp_sink"],
         check=True,
     )
     print(f"[bt] Switched {card} → A2DP", flush=True)
@@ -45,7 +45,7 @@ def switch_to_hfp() -> None:
     _require_pi()
     card = get_card_id()
     subprocess.run(
-        ["pactl", "set-card-profile", card, "headset-head-unit"],
+        ["pactl", "set-card-profile", card, "handsfree_head_unit"],
         check=True,
     )
     print(f"[bt] Switched {card} → HFP", flush=True)
