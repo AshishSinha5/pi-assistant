@@ -7,7 +7,6 @@ Entry point for Pi Assistant.
 """
 
 import argparse
-import sys
 
 
 def _register_tools():
@@ -50,24 +49,12 @@ def _run_voice_mode():
     from audio.stt import transcribe_once
     from audio.tones import play_listening_tone, play_done_tone
 
-    # Bluetooth profile switching is Pi-only
-    is_pi = sys.platform != "darwin"
-    if is_pi:
-        from audio.bluetooth import switch_to_hfp, switch_to_a2dp
-    else:
-        switch_to_hfp = switch_to_a2dp = None
-
     history = []
 
     print("Pi Assistant — voice mode")
-    print(f"Platform: {'Pi' if is_pi else 'Mac (no Bluetooth switching)'}")
     print("Say the wake word to start.\n")
 
     while True:
-        # Ensure mic profile is active on Pi
-        if is_pi:
-            switch_to_hfp()
-
         wait_for_wake_word()
         play_listening_tone()
         print("Listening for your command...", flush=True)
@@ -79,10 +66,6 @@ def _run_voice_mode():
             continue
 
         print(f"You: {text}")
-
-        # Switch to high-quality audio before the agent runs tools (music playback)
-        if is_pi:
-            switch_to_a2dp()
 
         response, history = agent.run(text, history)
         print(f"Pi: {response}\n")

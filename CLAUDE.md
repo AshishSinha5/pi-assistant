@@ -10,7 +10,8 @@ A voice-activated LLM agent running on a Raspberry Pi 5. You say a wake word ("P
 | Component | Details |
 |---|---|
 | Board | Raspberry Pi 5, 8GB RAM |
-| Audio I/O | Sony WH-1000XM5 (Bluetooth, mic + speaker via HFP/A2DP profile switching) |
+| Mic | USB microphone (always available, no profile switching needed) |
+| Speaker | Sony WH-1000XM5 (Bluetooth A2DP, stays in A2DP permanently) |
 | Storage | (SD card / NVMe — update as needed) |
 | Network | WiFi (needed for OpenRouter API + YouTube streaming) |
 
@@ -41,26 +42,13 @@ A voice-activated LLM agent running on a Raspberry Pi 5. You say a wake word ("P
 
 ## Audio Architecture
 
-Sony XM5 is the sole audio device. Bluetooth has two profiles:
+Two separate audio devices:
 
-- **HFP (Headset Profile)** — mic enabled, audio quality degraded (8kHz, phone-call level)
-- **A2DP (Advanced Audio)** — high quality audio, mic completely disabled
+- **USB mic** — always on, used for wake word detection and STT
+- **Sony XM5 (Bluetooth)** — A2DP only, used for music/audio playback
 
-**Profile switching strategy:**
-- Listening for wake word + STT → XM5 in **HFP mode**
-- Playing music/audio response → flip to **A2DP mode**
-- Done playing → flip back to **HFP mode**
-
-Switching is done via PipeWire/pactl:
-```bash
-# Switch to high quality playback
-pactl set-card-profile bluez_card.XX_XX_XX a2dp-sink
-
-# Switch back to mic mode
-pactl set-card-profile bluez_card.XX_XX_XX headset-head-unit
-```
-
-The actual card ID (`bluez_card.XX_XX_XX`) must be detected at runtime via `pactl list cards`.
+No profile switching needed. XM5 stays in `a2dp_sink` permanently.
+`audio/bluetooth.py` is retained but not called from the main loop.
 
 ---
 
