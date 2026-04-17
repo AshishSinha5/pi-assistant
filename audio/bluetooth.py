@@ -29,6 +29,21 @@ def get_card_id() -> str:
     raise RuntimeError("Could not find a Bluetooth (bluez) card via pactl. Is XM5 connected?")
 
 
+def _is_profile_available(card: str, profile: str) -> bool:
+    """Return True if the given profile is listed as available for this card."""
+    result = subprocess.run(
+        ["pactl", "list", "cards"],
+        capture_output=True, text=True, check=True,
+    )
+    in_card = False
+    for line in result.stdout.splitlines():
+        if card in line:
+            in_card = True
+        if in_card and profile in line:
+            return "available: yes" in line
+    return False
+
+
 def switch_to_a2dp() -> None:
     """Switch XM5 to A2DP (high-quality playback, mic off)."""
     _require_pi()
@@ -41,9 +56,21 @@ def switch_to_a2dp() -> None:
 
 
 def switch_to_hfp() -> None:
-    """Switch XM5 to HFP (mic on, degraded audio)."""
+    """Switch XM5 to HFP (mic on, degraded audio).
+
+    HFP requires ofono or hsphfpd to be running on the Pi for PipeWire to
+    negotiate the codec. If the profile is unavailable, logs a warning and
+    continues in A2DP mode (mic will not work).
+    """
     _require_pi()
     card = get_card_id()
+    if not _is_profile_available(card, "handsfree_head_unit"):
+        print(
+            "[bt] WARNING: HFP profile not available — mic will not work. "
+            "Install ofono to enable HFP: sudo apt install ofono",
+            flush=True,
+        )
+        return
     subprocess.run(
         ["pactl", "set-card-profile", card, "handsfree_head_unit"],
         check=True,
