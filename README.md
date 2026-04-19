@@ -1,6 +1,6 @@
 # Pi Assistant
 
-A voice-activated LLM agent running on a Raspberry Pi 5. Say a wake word, speak a command, and the agent executes it via tool calls — starting with playing music from YouTube.
+A voice-activated LLM agent running on a Raspberry Pi 5. Say a wake word, speak a command, and the agent executes it via tool calls.
 
 ---
 
@@ -9,7 +9,8 @@ A voice-activated LLM agent running on a Raspberry Pi 5. Say a wake word, speak 
 | Component | Details |
 |---|---|
 | Board | Raspberry Pi 5, 8GB RAM |
-| Audio | Sony WH-1000XM5 (Bluetooth — mic via HFP, playback via A2DP) |
+| Mic | USB microphone |
+| Speaker | Sony WH-1000XM5 (Bluetooth A2DP) |
 | OS | Ubuntu 24.04 LTS (headless) |
 
 ---
@@ -20,8 +21,8 @@ A voice-activated LLM agent running on a Raspberry Pi 5. Say a wake word, speak 
 Wake word heard → STT transcribes command → LLM decides tool → Tool executes
 ```
 
-- **Wake word** — faster-whisper listens in 3-second windows and fires when the configured keyword is heard
-- **STT** — faster-whisper records until silence and returns the transcribed command
+- **Wake word** — faster-whisper listens locally in 3-second windows and fires when the configured keyword is heard
+- **STT** — OpenAI Whisper API transcribes the spoken command (model configurable via `STT_MODEL`)
 - **LLM** — OpenRouter (Qwen 2.5 72B) receives the command and calls tools
 - **Tools** — `play_music` streams audio via yt-dlp + mpv; `stop_music` kills playback; `turn_on_light` / `turn_off_light` control a Tapo smart light via python-kasa
 
@@ -31,7 +32,7 @@ Wake word heard → STT transcribes command → LLM decides tool → Tool execut
 
 ```
 pi-assistant/
-├── config.py                  # All settings (model, wake word, mic, thresholds)
+├── config.py                  # All settings (models, wake word, mic, thresholds)
 ├── main.py                    # Entry point — --mode test or --mode voice
 │
 ├── agent/
@@ -43,9 +44,9 @@ pi-assistant/
 │   └── light.py               # turn_on_light + turn_off_light (python-kasa / Tapo)
 │
 ├── audio/
-│   ├── stt.py                 # faster-whisper STT with energy-based VAD
-│   ├── wake_word.py           # faster-whisper wake word detection
-│   └── bluetooth.py           # HFP ↔ A2DP profile switching (Pi only)
+│   ├── stt.py                 # Energy-based VAD recorder + OpenAI Whisper API transcription
+│   ├── wake_word.py           # faster-whisper wake word detection (local, always-on)
+│   └── bluetooth.py           # A2DP helpers (retained, not called from main loop)
 │
 └── tests/
     └── test_agent_mac.py      # Interactive text-input loop for Mac testing
@@ -75,15 +76,13 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### Configure API key and smart home
+### Configure keys
 
-```bash
-cp .env.example .env
-# Edit .env and fill in your keys
-```
+Copy `.env.example` to `.env` and fill in:
 
 ```
-OPENROUTER_API_KEY=your_key_here   # free at openrouter.ai
+OPENROUTER_API_KEY=your_key_here   # free at openrouter.ai — used for LLM
+OPENAI_API_KEY=sk-...              # openai.com — used for Whisper STT
 KASA_USERNAME=your@email.com       # Tapo/Kasa account
 KASA_PASSWORD=yourpassword
 TAPO_HOST=192.168.x.x              # local IP of the Tapo device
@@ -107,12 +106,9 @@ Type commands at the prompt. Real music streams via mpv. Type `reset` to clear c
 python main.py --mode voice
 ```
 
-1. The Whisper model downloads automatically on first run (~145 MB)
-2. Say the wake word (default: `"hey there"`) — configured in `config.py`
-3. Speak your command after "Listening for your command..."
-4. The agent runs and music plays
-
-On Pi, Bluetooth profile switches automatically (HFP for mic → A2DP for playback).
+1. Say the wake word (default: `"hello"`) — configured in `config.py`
+2. Speak your command after the listening tone
+3. The agent runs the appropriate tool
 
 ---
 
@@ -122,9 +118,10 @@ All settings live in `config.py`:
 
 | Setting | Default | Description |
 |---|---|---|
-| `WHISPER_MODEL` | `"base.en"` | Model size: `tiny.en`, `base.en`, `small.en`, `medium.en` |
-| `WAKE_WORD_KEYWORD` | `"hey there"` | Phrase to trigger the assistant |
-| `AUDIO_ENERGY_THRESHOLD` | `3000` | Mic sensitivity for command recording (0–32768) |
+| `WAKE_WORD_KEYWORD` | `"hello"` | Phrase to trigger the assistant |
+| `WHISPER_MODEL` | `"base"` | Local faster-whisper model for wake word (tiny / base / small) |
+| `STT_MODEL` | `"gpt-4o-mini-transcribe"` | OpenAI model for command STT (`whisper-1`, `gpt-4o-mini-transcribe`, `gpt-4o-transcribe`) |
+| `AUDIO_ENERGY_THRESHOLD` | `200` | Mic sensitivity for VAD (0–32768) |
 | `MIC_DEVICE` | `None` | Mic device name/index (`None` = system default) |
 | `PRIMARY_MODEL` | `qwen/qwen-2.5-72b-instruct` | LLM via OpenRouter |
 
@@ -158,11 +155,22 @@ tool_registry.register(WEATHER_SCHEMA, get_weather)
 
 ---
 
+## Run as a service (Pi)
+
+```bash
+sudo systemctl enable --now pi-assistant
+journalctl -u pi-assistant -f   # live logs
+```
+
+See `pi-assistant.service` for the systemd unit file.
+
+---
+
 ## Phase plan
 
 | Phase | Status | Description |
 |---|---|---|
-| 1 | ✅ Complete | LLM + tools + real music streaming + mic pipeline on Mac |
-| 2 | Planned | Pi audio pipeline (Bluetooth profile switching wired up) |
-| 3 | Planned | Full integration — wake word → speech → music plays on Pi |
+| 1 | ✅ Complete | LLM + tools + real music streaming + mic pipeline |
+| 2 | ✅ Complete | Pi audio pipeline — USB mic, faster-whisper wake word, OpenAI STT |
+| 3 | ✅ Complete | Full integration — wake word → speech → tool executes on Pi |
 | 4 | In progress | New tools: timers, weather, news |
