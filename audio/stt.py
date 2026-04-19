@@ -1,17 +1,18 @@
 """
-Speech-to-text using faster-whisper.
+Speech-to-text:
+  - Wake word detection  → local faster-whisper (always-on, runs in a loop)
+  - Command transcription → OpenAI Whisper API  (one call per command)
 
-Records from the mic using energy-based VAD (starts on speech, stops on silence),
-then transcribes with faster-whisper.
-
-Works on Mac (built-in mic) and Pi (XM5 HFP mic).
-Model is downloaded automatically from HuggingFace on first use.
+Recording uses energy-based VAD: starts on speech onset, stops on silence.
 
 Requirements:
-  pip install faster-whisper sounddevice
+  pip install faster-whisper sounddevice openai
 """
 
+import io
 import queue
+import wave
+
 import numpy as np
 import sounddevice as sd
 
@@ -22,30 +23,44 @@ CHUNK_SAMPLES = 1600       # 100 ms per chunk
 SILENCE_CHUNKS = 15        # 1.5 s of silence → end of utterance
 MAX_CHUNKS = 100           # 10 s hard cap
 
-# Shared model instance — loaded once, reused across calls
+# Shared local model instance — used by wake_word.py, loaded once
 _model = None
 
 
 def _get_model():
+    """Return the local faster-whisper model (for wake word detection)."""
     global _model
     if _model is None:
         from faster_whisper import WhisperModel
         name = config.WHISPER_MODEL
-        print(f"[stt] Loading Whisper model '{name}'...", flush=True)
+        print(f"[stt] Loading local Whisper model '{name}'...", flush=True)
         _model = WhisperModel(name, device="cpu", compute_type="int8")
         print("[stt] Model ready.", flush=True)
     return _model
 
 
+def _transcribe(audio: np.ndarray) -> str:
+    """Transcribe a numpy int16 array locally (used by wake_word.py)."""
+    model = _get_model()
+    audio_f32 = audio.astype(np.float32) / 32768.0
+    segments, _ = model.transcribe(
+        audio_f32,
+        language="en",
+        beam_size=1,
+        vad_filter=True,
+    )
+    return " ".join(s.text.strip() for s in segments).strip()
+
+
 def transcribe_once() -> str:
     """
-    Wait for speech, record until silence, and return the transcribed text.
+    Record one spoken command and transcribe it via the OpenAI Whisper API.
     Returns an empty string if nothing was captured.
     """
     audio = _record_utterance()
     if audio is None or len(audio) == 0:
         return ""
-    return _transcribe(audio)
+    return _transcribe_api(audio)
 
 
 def _record_utterance() -> np.ndarray | None:
@@ -93,15 +108,26 @@ def _record_utterance() -> np.ndarray | None:
     return np.concatenate(chunks)
 
 
-def _transcribe(audio: np.ndarray) -> str:
-    """Transcribe a numpy int16 audio array. Returns stripped text."""
-    model = _get_model()
-    # faster-whisper expects float32 normalised to [-1, 1]
-    audio_f32 = audio.astype(np.float32) / 32768.0
-    segments, _ = model.transcribe(
-        audio_f32,
+def _transcribe_api(audio: np.ndarray) -> str:
+    """Send audio to the OpenAI Whisper API and return the transcript."""
+    import openai
+
+    client = openai.OpenAI(api_key=config.OPENAI_API_KEY)
+
+    # Build an in-memory WAV file — OpenAI API requires a named file-like object
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)          # int16 = 2 bytes per sample
+        wf.setframerate(SAMPLE_RATE)
+        wf.writeframes(audio.tobytes())
+    buf.seek(0)
+    buf.name = "audio.wav"
+
+    print("[stt] Transcribing via OpenAI Whisper API...", flush=True)
+    result = client.audio.transcriptions.create(
+        model=config.STT_MODEL,
+        file=buf,
         language="en",
-        beam_size=1,          # fastest setting
-        vad_filter=True,      # built-in VAD to skip silence
     )
-    return " ".join(s.text.strip() for s in segments).strip()
+    return result.text.strip()

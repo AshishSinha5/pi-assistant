@@ -81,7 +81,7 @@ def play_music(query: str) -> str:
     # Stop any existing playback before starting new
     _stop()
 
-    query = _refine_query(query)
+    # query = _refine_query(query)
     print(f"[music] Searching YouTube for: {query!r}")
 
     try:

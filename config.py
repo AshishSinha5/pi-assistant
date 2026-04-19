@@ -4,6 +4,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# OpenAI Whisper model for STT.
+# Options: "whisper-1" (standard), "gpt-4o-transcribe", "gpt-4o-mini-transcribe"
+STT_MODEL = "gpt-4o-mini-transcribe"
 
 # --- Tapo smart light ---
 KASA_USERNAME = os.getenv("KASA_USERNAME")
@@ -22,7 +27,7 @@ MIC_DEVICE = None
 # faster-whisper model size. Downloaded automatically from HuggingFace on first use.
 # Options (English-only variants are faster): tiny.en, base.en, small.en, medium.en
 # Recommended: "base.en" (~145 MB) — good balance of speed and accuracy on Pi 5
-WHISPER_MODEL = "base.en"
+WHISPER_MODEL = "base"
 
 # Wake word keyword — matched as a whole word in the transcription.
 # With Whisper you can use the actual word "pi" directly.
@@ -30,4 +35,4 @@ WAKE_WORD_KEYWORD = "hello"
 
 # RMS energy threshold for speech onset detection (0–32768).
 # Increase if the mic picks up too much background noise.
-AUDIO_ENERGY_THRESHOLD = 300
+AUDIO_ENERGY_THRESHOLD = 200
